@@ -158,7 +158,7 @@ public class UserService {
         String body = "You have successfully confirming your email address, " +
                 "now you can choose fitness package.";
         emailService.sendMail(users.getEmail(), subject, body);
-        
+
 
         return ResponseTemplate.builder()
                 .responseCode(9000)
