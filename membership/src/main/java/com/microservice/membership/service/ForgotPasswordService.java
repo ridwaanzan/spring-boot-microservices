@@ -1,11 +1,13 @@
 package com.microservice.membership.service;
 
+import com.microservice.membership.dto.ConfirmResetPasswordOtpRequestDto;
 import com.microservice.membership.dto.ResetPasswordRequestDto;
 import com.microservice.membership.dto.ResponseTemplate;
 import com.microservice.membership.model.OneTimePasswords;
 import com.microservice.membership.model.Users;
 import com.microservice.membership.repository.OneTimePasswordRepository;
 import com.microservice.membership.repository.UsersRepository;
+import com.microservice.membership.utils.EmailService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class ForgotPasswordService {
     private final String TYPE_USER_FORGOT_PASSWORD = "USER_FORGOT_PASSWORD";
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     public ForgotPasswordService(UsersRepository usersRepository,
                                  OneTimePasswordRepository oneTimePasswordRepository,
                                  PasswordEncoder passwordEncoder) {
@@ -55,14 +60,20 @@ public class ForgotPasswordService {
                     .build();
         }
         Users userData  = usersRepository.findByEmail(request.getEmail()).get();
+        Integer otp = generateOneTimePassword();
         OneTimePasswords oneTimePasswordsData = OneTimePasswords.builder()
                 .user(userData)
-                .otp(generateOneTimePassword())
+                .otp(otp)
                 .expiredDate(Timestamp.valueOf(LocalDateTime.now().plusHours(2)))
                 .type(TYPE_USER_FORGOT_PASSWORD)
                 .build();
 
         oneTimePasswordRepository.save(oneTimePasswordsData);
+
+        // send mail
+        String subject = "Your one time password - reset password";
+        String body = "Your one time password (OTP) reset password is: " + otp;
+        emailService.sendMail(userData.getEmail(), subject, body);
 
         return ResponseTemplate.builder()
                 .responseCode(9000)
@@ -72,7 +83,61 @@ public class ForgotPasswordService {
                 .build();
     }
 
-    // TODO: confirm email reset OTP
+    // confirm email reset OTP
+    public ResponseTemplate ConfirmResetPasswordOtp(ConfirmResetPasswordOtpRequestDto request) {
+        log.info("Start ConfirmResetPasswordOtp");
+        log.info("ConfirmResetPasswordOtp Request: {}", request);
+
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            return ResponseTemplate.builder()
+                    .responseCode(4030)
+                    .isSuccess(false)
+                    .message("Validation error. Please confirm with the same password.")
+                    .payload("")
+                    .build();
+        }
+
+        if (!isUserExist(request.getEmail())) {
+            return ResponseTemplate.builder()
+                    .responseCode(4040)
+                    .isSuccess(false)
+                    .message("User Not Found.")
+                    .payload("")
+                    .build();
+        }
+
+        Optional<Users> optionalUser = usersRepository.findByEmail(request.getEmail());
+        Users users = optionalUser.get();
+        Optional<OneTimePasswords> optionalOneTimePasswords = oneTimePasswordRepository.findByUserIdAndOtpAndType(users.getId(),
+                                                                                                                  request.getOtp(),
+                                                                                                                  TYPE_USER_FORGOT_PASSWORD);
+
+        if (!optionalOneTimePasswords.isPresent()) {
+            return ResponseTemplate.builder()
+                    .responseCode(4040)
+                    .isSuccess(false)
+                    .message("OTP Not Found.")
+                    .payload(null)
+                    .build();
+        }
+
+        OneTimePasswords oneTimePasswords = optionalOneTimePasswords.get();
+        users.setPassword(passwordEncoder.encode(request.getPassword()));
+        usersRepository.save(users);
+        oneTimePasswordRepository.delete(oneTimePasswords);
+
+        // send mail
+        String subject = "Success reset password";
+        String body = "You have successfully change your password.";
+        emailService.sendMail(users.getEmail(), subject, body);
+
+        return ResponseTemplate.builder()
+                .responseCode(9000)
+                .isSuccess(true)
+                .message("Success confirm token. You can reset password now.")
+                .payload(users)
+                .build();
+    }
 
 
     private Boolean isUserExist(String email) {

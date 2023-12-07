@@ -7,6 +7,7 @@ import com.microservice.membership.model.Users;
 import com.microservice.membership.repository.CreditCardsRepository;
 import com.microservice.membership.repository.OneTimePasswordRepository;
 import com.microservice.membership.repository.UsersRepository;
+import com.microservice.membership.utils.EmailService;
 import com.microservice.membership.utils.EncryptionCreditCard;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,8 @@ public class UserService {
     private final String TYPE_USER_REGISTRATION = "USER_REGISTRATION";
     private final String TYPE_USER_FORGOT_PASSWORD = "USER_FORGOT_PASSWORD";
 
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     public UserService(UsersRepository usersRepository,
@@ -91,9 +94,10 @@ public class UserService {
                     .build();
 
         // save OTP
+        Integer otp = generateOneTimePassword();
         OneTimePasswords oneTimePasswordsData = OneTimePasswords.builder()
                 .user(userData)
-                .otp(generateOneTimePassword())
+                .otp(otp)
                 .expiredDate(Timestamp.valueOf(LocalDateTime.now().plusHours(2)))
                 .type(TYPE_USER_REGISTRATION)
                 .build();
@@ -101,6 +105,11 @@ public class UserService {
         Users savedUser = usersRepository.save(userData);
         creditCardsRepository.save(creditCardsData);
         oneTimePasswordRepository.save(oneTimePasswordsData);
+
+        // send mail
+        String subject = "Your one time password - registration";
+        String body = "Your one time password (OTP) registration is: " + otp;
+        emailService.sendMail(userData.getEmail(), subject, body);
 
         return ResponseTemplate.builder()
                 .responseCode(9000)
@@ -143,6 +152,13 @@ public class UserService {
         users.setStatus(STATUS_TIDAK_TERDAFTAR);
         usersRepository.save(users);
         oneTimePasswordRepository.delete(oneTimePasswords);
+
+        // send mail
+        String subject = "Success confirm email";
+        String body = "You have successfully confirming your email address, " +
+                "now you can choose fitness package.";
+        emailService.sendMail(users.getEmail(), subject, body);
+        
 
         return ResponseTemplate.builder()
                 .responseCode(9000)
