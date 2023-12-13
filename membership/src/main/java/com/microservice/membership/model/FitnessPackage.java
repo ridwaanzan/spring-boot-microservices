@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Data
@@ -23,6 +24,9 @@ public class FitnessPackage implements Serializable {
     @Column(name = "id")
     private Long id;
 
+    @OneToMany(mappedBy = "fitnessPackage", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FitnessPackageDetail> fitnessPackageDetails;
+
     @Column(name = "name")
     private String name;
 
@@ -31,4 +35,15 @@ public class FitnessPackage implements Serializable {
 
     @Column(name = "duration")
     private Integer duration;
+
+    @Override
+    public String toString() {
+        return "FitnessPackage{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", price=" + price +
+                ", duration=" + duration +
+                '}';
+    }
+
 }

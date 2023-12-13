@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serial;
 import java.io.Serializable;
 
 @Entity
@@ -14,9 +13,9 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "credit_cards")
-public class CreditCards implements Serializable {
-    private static final long serialVersionUID = -6775213906716648777L;
+@Table(name = "fitness_memberships")
+public class FitnessMembership implements Serializable {
+    private static final long serialVersionUID = -3210148467812121875L;
 
     @Id
     @GeneratedValue
@@ -27,15 +26,13 @@ public class CreditCards implements Serializable {
     @JoinColumn(name = "user_id", nullable = false)
     private Users users;
 
-    @Column(name = "card_number")
-    private String cardNumber;
+    @ManyToOne
+    @JoinColumn(name = "fitness_package_id", nullable = false)
+    private FitnessPackage fitnessPackage;
 
-    @Column(name = "cvv_number")
-    private String cvvNumber;
+    @Column(name = "remaining_duration")
+    private Integer remainingDuration;
 
-    @Column(name = "expired_date")
-    private String expiredDate;
-
-    @Column(name = "card_holder_name")
-    private String cardHolderName;
+    @Column(name = "status")
+    private Integer status;
 }

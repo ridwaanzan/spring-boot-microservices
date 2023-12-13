@@ -34,4 +34,14 @@ public class FitnessPackageDetail implements Serializable {
 
     @Column(name = "time")
     private Integer exercise_time;
+
+    @Override
+    public String toString() {
+        return "FitNessPackageDetail{" +
+                "id='" + id + "'" +
+                ", name='"+ name +"'" +
+                ", description='"+ description +"'" +
+                ", exercise_time='"+ exercise_time +"'" +
+                "}";
+    }
 }
